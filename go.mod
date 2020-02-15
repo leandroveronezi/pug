@@ -1,4 +1,4 @@
-module pug
+module github.com/leandroveronezi/pug
 
 go 1.13
 
