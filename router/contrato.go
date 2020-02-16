@@ -1,7 +1,9 @@
 package router
 
-import "github.com/leandroveronezi/pug"
+import (
+	"github.com/gowebapi/webapi/dom"
+)
 
-type TComponent interface {
-	Render(el *casandra.TDomElement, Parameters ...interface{})
+type THTMLComponent interface {
+	Render(el *dom.Element, Parameters ...interface{})
 }
