@@ -1,10 +1,8 @@
 package router
 
 import (
-	"github.com/gowebapi/webapi"
 	"github.com/gowebapi/webapi/dom"
-	"github.com/gowebapi/webapi/html/htmlevent"
-	"reflect"
+	"github.com/leandroveronezi/pug/console"
 	"strings"
 	"sync"
 	"syscall/js"
@@ -12,27 +10,27 @@ import (
 
 type TRoute struct {
 	Path      string
-	Component reflect.Type
+	Component THTMLComponent
 	Meta      interface{}
 }
 
 type TRouter struct {
-	RouterView *dom.Element
-	Routes     map[string]TRoute
+	Routes  map[string]TRoute
+	TagMain *dom.Element
 }
 
 var instance *TRouter
 var onceRouterSingleton sync.Once
 
-func GetRouter() *TRouter {
+func GetRouter(TagMain *dom.Element) *TRouter {
 
 	onceRouterSingleton.Do(func() {
 
 		instance = &TRouter{}
 		instance.Routes = make(map[string]TRoute, 0)
+		instance.TagMain = TagMain
 
 		js.Global().Get("Pug").Set("Router", js.Global().Call("eval", "new Object()"))
-
 		js.Global().Get("Pug").Get("Router").Set("Push", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 
 			//_args[0:_end]
@@ -41,9 +39,12 @@ func GetRouter() *TRouter {
 
 		}))
 
-		webapi.GetWindow().AddEventHashChange(func(event *htmlevent.HashChangeEvent, currentTarget *webapi.Window) {
+		js.Global().Get("window").Set("onhashchange", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+
 			instance.CheckRoute()
-		})
+
+			return nil
+		}))
 
 	})
 	return instance
@@ -51,34 +52,29 @@ func GetRouter() *TRouter {
 
 func (_this TRouter) CheckRoute() {
 
-	fn := js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+	console.Log("check called")
 
-		hash := js.Global().Get("window").Get("location").Get("hash").String()
-		hash = strings.TrimSpace(hash)
+	hash := js.Global().Get("window").Get("location").Get("hash").String()
+	hash = strings.TrimSpace(hash)
 
-		if len(hash) == 0 {
-			hash = "/"
+	if len(hash) == 0 {
+		hash = "/"
+	}
+
+	if hash[0:1] == "#" {
+		hash = hash[1:]
+	}
+
+	for idx, val := range _this.Routes {
+
+		if val.Path == hash {
+			_this.Push(idx)
+			return
 		}
 
-		if hash[0:1] == "#" {
-			hash = hash[1:]
-		}
+	}
 
-		for idx, val := range _this.Routes {
-
-			if val.Path == hash {
-				_this.Push(idx)
-				return nil
-			}
-
-		}
-
-		_this.Push("404")
-
-		return nil
-	})
-
-	js.Global().Get("document").Call("addEventListener", "DOMContentLoaded", fn, false)
+	//_this.Push("404")
 
 }
 
@@ -92,42 +88,58 @@ func (_this *TRouter) Add(Routes map[string]TRoute) {
 
 func (_this *TRouter) Push(Name string, Parameters ...interface{}) {
 
-	if _this.RouterView == nil {
+	console.Log("push caled")
+
+	if _this.TagMain == nil {
+		console.Log("Sem tag")
 		return
 	}
 
 	_, ok := _this.Routes[Name]
 
-	var componentType reflect.Type
-
 	routeName := Name
 
 	if !ok {
+		console.Log("tag não encontrada")
 		routeName = "404"
-	} else {
-
+		return
 	}
+
+	var componentType THTMLComponent
 
 	componentType = _this.Routes[routeName].Component
 
-	ms := reflect.New(componentType)
+	_this.TagMain.SetInnerHTML("")
 
-	_this.RouterView.SetInnerHTML("")
+	componentType.Render(_this.TagMain)
+	history := js.Global().Get("Object").New()
+	js.Global().Get("history").Call("pushState", history, js.Null(), "#"+_this.Routes[routeName].Path)
 
-	Method := ms.MethodByName("Render")
+	/*
 
-	in := make([]reflect.Value, len(Parameters)+1)
-	in[0] = reflect.ValueOf(_this.RouterView)
+		var componentType reflect.Type
 
-	for k, param := range Parameters {
-		in[k+1] = reflect.ValueOf(param)
-	}
+		componentType = _this.Routes[routeName].Component
 
-	if Method.IsValid() {
-		Method.Call(in)
-		history := js.Global().Get("Object").New()
-		js.Global().Get("history").Call("pushState", history, js.Null(), "#"+_this.Routes[routeName].Path)
-	}
+		ms := reflect.New(componentType)
+
+		_this.RouterView.Dom().Set("innerHTML", "")
+
+		Method := ms.MethodByName("Render")
+
+		in := make([]reflect.Value, len(Parameters)+1)
+		in[0] = reflect.ValueOf(_this.RouterView)
+
+		for k, param := range Parameters {
+			in[k+1] = reflect.ValueOf(param)
+		}
+
+		if Method.IsValid() {
+			Method.Call(in)
+			history := js.Global().Get("Object").New()
+			js.Global().Get("history").Call("pushState", history, js.Null(), "#"+_this.Routes[routeName].Path)
+		}
+	*/
 
 }
 
