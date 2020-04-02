@@ -1,8 +1,9 @@
 package router
 
 import (
+	"github.com/gowebapi/webapi"
 	"github.com/gowebapi/webapi/dom"
-	"github.com/leandroveronezi/pug/console"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall/js"
@@ -22,6 +23,96 @@ type TRouter struct {
 var instance *TRouter
 var onceRouterSingleton sync.Once
 
+func init() {
+
+	js.Global().Get("Pug").Set("Router", js.Global().Call("eval", "new Object()"))
+
+	js.Global().Get("Pug").Get("Router").Set("Push", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+
+		if instance == nil {
+			return nil
+		}
+
+		Parameters := make(map[string]js.Value)
+
+		if len(args) == 2 {
+
+			if args[1].Type() == js.TypeObject {
+
+				keys := js.Global().Get("Object").Call("keys", args[1])
+
+				for i := 0; i < keys.Get("length").Int(); i++ {
+
+					Parameters[keys.Index(i).String()] = args[1].Get(keys.Index(i).String())
+
+				}
+
+			}
+
+		}
+
+		instance.Push(args[0].String(), Parameters)
+
+		return nil
+	}))
+
+	js.Global().Get("window").Set("onhashchange", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+
+		if instance == nil {
+			return nil
+		}
+
+		instance.CheckRoute()
+
+		return nil
+	}))
+
+	script := webapi.GetDocument().CreateElement("script", nil)
+	script.SetInnerHTML(`
+
+function getRouteParams(url,routes) {
+
+	var argsVal,
+		argsNames,
+		params = {};
+
+	for(var x = 0; x < routes.length; x++) {
+
+		var currRoute = routes[x].url;
+		var routeMatcher = new RegExp(currRoute.replace(/(:\w+)/g, '([\\w-]+)'));
+		argsVal = url.match(routeMatcher);
+	
+		if(argsVal) {
+	
+			argsVal.shift();
+		  	argsNames = currRoute.match(/(:\w+)/g);
+	
+		  	if(argsNames) {
+				for(var y = 0; y < argsNames.length; y++){
+			  		params[argsNames[y].slice(1)] = argsVal[y];
+				}
+		  	}
+
+			params.url = currRoute;
+	
+		  	return {
+				params : params
+		  	};
+	
+		}
+
+	}
+	
+	return null;
+
+}
+
+`)
+
+	js.Global().Get("document").Get("body").Call("appendChild", script.JSValue())
+
+}
+
 func GetRouter(TagMain *dom.Element) *TRouter {
 
 	onceRouterSingleton.Do(func() {
@@ -30,31 +121,15 @@ func GetRouter(TagMain *dom.Element) *TRouter {
 		instance.Routes = make(map[string]TRoute, 0)
 		instance.TagMain = TagMain
 
-		js.Global().Get("Pug").Set("Router", js.Global().Call("eval", "new Object()"))
-		js.Global().Get("Pug").Get("Router").Set("Push", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-
-			//_args[0:_end]
-			instance.Push(args[0].String())
-			return nil
-
-		}))
-
-		js.Global().Get("window").Set("onhashchange", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-
-			instance.CheckRoute()
-
-			return nil
-		}))
-
 	})
+
 	return instance
 }
 
-func (_this TRouter) CheckRoute() {
-
-	console.Log("check called")
+func (_this *TRouter) CheckRoute() {
 
 	hash := js.Global().Get("window").Get("location").Get("hash").String()
+
 	hash = strings.TrimSpace(hash)
 
 	if len(hash) == 0 {
@@ -68,13 +143,50 @@ func (_this TRouter) CheckRoute() {
 	for idx, val := range _this.Routes {
 
 		if val.Path == hash {
-			_this.Push(idx)
+			_this.Push(idx, nil)
 			return
 		}
 
 	}
 
-	//_this.Push("404")
+	params := _this.getRouteParams(hash)
+
+	Parameters := make(map[string]js.Value)
+
+	if params.Type() == js.TypeObject {
+
+		existe := params.Call("hasOwnProperty", "params")
+
+		if existe.Bool() {
+			params = params.Get("params")
+
+			keys := js.Global().Get("Object").Call("keys", params)
+
+			for i := 0; i < keys.Get("length").Int(); i++ {
+
+				if keys.Index(i).String() == "url" {
+					hash = params.Get("url").String()
+					continue
+				}
+
+				Parameters[keys.Index(i).String()] = params.Get(keys.Index(i).String())
+
+			}
+
+		}
+
+	}
+
+	for idx, val := range _this.Routes {
+
+		if val.Path == hash {
+			_this.Push(idx, Parameters)
+			return
+		}
+
+	}
+	//{params:{uid:"1024", avatar: "ok", url}
+	//url = strings.ReplaceAll(url, ":"+idx, jsToString(val))
 
 }
 
@@ -86,12 +198,9 @@ func (_this *TRouter) Add(Routes map[string]TRoute) {
 
 }
 
-func (_this *TRouter) Push(Name string, Parameters ...interface{}) {
-
-	console.Log("push caled")
+func (_this *TRouter) Push(Name string, Parameters map[string]js.Value) {
 
 	if _this.TagMain == nil {
-		console.Log("Sem tag")
 		return
 	}
 
@@ -100,9 +209,14 @@ func (_this *TRouter) Push(Name string, Parameters ...interface{}) {
 	routeName := Name
 
 	if !ok {
-		console.Log("tag não encontrada")
 		routeName = "404"
 		return
+	}
+
+	url := _this.Routes[routeName].Path
+
+	for idx, val := range Parameters {
+		url = strings.ReplaceAll(url, ":"+idx, jsToString(val))
 	}
 
 	var componentType THTMLComponent
@@ -111,108 +225,56 @@ func (_this *TRouter) Push(Name string, Parameters ...interface{}) {
 
 	_this.TagMain.SetInnerHTML("")
 
-	componentType.Render(_this.TagMain)
+	componentType.Render(_this.TagMain, Parameters)
+
 	history := js.Global().Get("Object").New()
-	js.Global().Get("history").Call("pushState", history, js.Null(), "#"+_this.Routes[routeName].Path)
-
-	/*
-
-		var componentType reflect.Type
-
-		componentType = _this.Routes[routeName].Component
-
-		ms := reflect.New(componentType)
-
-		_this.RouterView.Dom().Set("innerHTML", "")
-
-		Method := ms.MethodByName("Render")
-
-		in := make([]reflect.Value, len(Parameters)+1)
-		in[0] = reflect.ValueOf(_this.RouterView)
-
-		for k, param := range Parameters {
-			in[k+1] = reflect.ValueOf(param)
-		}
-
-		if Method.IsValid() {
-			Method.Call(in)
-			history := js.Global().Get("Object").New()
-			js.Global().Get("history").Call("pushState", history, js.Null(), "#"+_this.Routes[routeName].Path)
-		}
-	*/
+	js.Global().Get("history").Call("pushState", history, js.Null(), "#"+url)
 
 }
 
-/*
-const link = $(`a[href$='${window.location.pathname}']`);
-link.addClass('active');
+func (_this *TRouter) getRouteParams(url string) js.Value {
 
-$('a').on('click', (event) => {
-  // Block browser page load
-  event.preventDefault();
+	routes := js.Global().Get("Array").New()
 
-  // Highlight Active Menu on Click
-  const target = $(event.target);
-  $('.item').removeClass('active');
-  target.addClass('active');
+	for _, reg := range _this.Routes {
 
-  // Navigate to clicked url
-  const href = target.attr('href');
-  const path = href.substr(href.lastIndexOf('/'));
-  router.navigateTo(path);
-});
+		obj := js.Global().Get("Object").New()
+		obj.Set("url", reg.Path)
 
+		routes.Call("push", obj)
 
+	}
 
+	return js.Global().Call("getRouteParams", url, routes)
 
-*/
-
-/*
-
-var routes = [
-  {url: "/users/:uid/pictures/:avatar"},
-  {url: "/users/:uid"},
-  {url: "/home"}
-];
-
-
-function getRouteParams(url) {
-
-  var argsVal,
-      argsNames,
-      params = {};
-
-  for(var x = 0; x < routes.length; x++){
-
-    var currRoute = routes[x].url;
-    var routeMatcher = new RegExp(currRoute.replace(/(:\w+)/g, '([\\w-]+)'));
-    argsVal = url.match(routeMatcher);
-
-    if(argsVal) {
-
-      argsVal.shift();
-      argsNames = currRoute.match(/(:\w+)/g);
-
-      if(argsNames) {
-        for(var y = 0; y < argsNames.length; y++){
-          params[argsNames[y].slice(1)] = argsVal[y];
-        }
-      }
-
-      return {
-        params : params
-      };
-
-    }
-
-  }
-  return null;
 }
 
+func jsToString(val js.Value) string {
 
-console.log(getRouteParams("/users/1024/pictures/ok")); // {params:{uid:"1024", avatar: "ok"}
-console.log(getRouteParams("/users/zezen")); // {params: {uid: "zezen"}}
-console.log(getRouteParams("/home")); // {params: {}}
-console.log(getRouteParams("/zezen")); // null
+	switch val.Type() {
+	case js.TypeString:
+		return val.String()
+	case js.TypeUndefined:
+		return "<undefined>"
+	case js.TypeNull:
+		return "<null>"
+	case js.TypeBoolean:
 
-*/
+		if val.Bool() {
+			return "true"
+		}
+		return "false"
+
+	case js.TypeNumber:
+		return strconv.Itoa(val.Int())
+	case js.TypeSymbol:
+		return "<symbol>"
+	case js.TypeObject:
+		return "<object>"
+	case js.TypeFunction:
+		return "<function>"
+	default:
+		panic("bad type")
+	}
+
+}
