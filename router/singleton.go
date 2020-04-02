@@ -16,8 +16,13 @@ type TRoute struct {
 }
 
 type TRouter struct {
-	Routes  map[string]TRoute
-	TagMain *dom.Element
+	Routes       map[string]TRoute
+	TagMain      *dom.Element
+	CurrentRoute struct {
+		Name       string
+		Parameters map[string]js.Value
+	}
+	NotFoundRouteName string
 }
 
 var instance *TRouter
@@ -209,8 +214,12 @@ func (_this *TRouter) Push(Name string, Parameters map[string]js.Value) {
 	routeName := Name
 
 	if !ok {
-		routeName = "404"
-		return
+
+		if _this.NotFoundRouteName == "" {
+			return
+		}
+
+		routeName = _this.NotFoundRouteName
 	}
 
 	url := _this.Routes[routeName].Path
@@ -218,6 +227,9 @@ func (_this *TRouter) Push(Name string, Parameters map[string]js.Value) {
 	for idx, val := range Parameters {
 		url = strings.ReplaceAll(url, ":"+idx, jsToString(val))
 	}
+
+	_this.CurrentRoute.Name = routeName
+	_this.CurrentRoute.Parameters = Parameters
 
 	var componentType THTMLComponent
 

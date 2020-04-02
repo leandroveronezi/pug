@@ -49,6 +49,10 @@ func (_this *DataField) SetB(value *interface{}) {
 
 }
 
+func (_this *DataField) SetC(value js.Value) {
+	_this.Set(&value)
+}
+
 func (_this *DataField) Set(value *js.Value) {
 
 	if _this.someObject == nil {
@@ -121,16 +125,6 @@ func (_this *DataField) newProxy() {
 
 	obj := js.Global().Get("Object").New()
 
-	obj.Set("get", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
-
-		target := args[0]
-		key := args[1]
-		receiver := args[2]
-
-		return js.Global().Get("Reflect").Call("get", target, key, receiver)
-
-	}))
-
 	obj.Set("set", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 
 		target := args[0]
@@ -153,6 +147,22 @@ func (_this *DataField) newProxy() {
 		}
 
 		return js.Global().Get("Reflect").Call("set", target, key, val, receiver)
+
+	}))
+
+	obj.Set("get", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+
+		target := args[0]
+		key := args[1]
+		receiver := args[2]
+
+		value := js.Global().Get("Reflect").Call("get", target, key, receiver)
+
+		if value.Type() == js.TypeObject {
+			return js.Global().Get("Proxy").New(value, obj)
+		}
+
+		return value
 
 	}))
 
