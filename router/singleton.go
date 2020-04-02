@@ -113,13 +113,13 @@ function getRouteParams(url,routes) {
 
 }
 
-func GetRouter(TagMain *dom.Element) *TRouter {
+func GetRouter() *TRouter {
 
 	onceRouterSingleton.Do(func() {
 
 		instance = &TRouter{}
 		instance.Routes = make(map[string]TRoute, 0)
-		instance.TagMain = TagMain
+		//instance.TagMain = TagMain
 
 	})
 
