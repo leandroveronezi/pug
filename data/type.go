@@ -6,7 +6,11 @@ import (
 	"syscall/js"
 )
 
-type FnChange *func(value *js.Value)
+type FnChange func(value *js.Value)
+
+func FuncChange(fn FnChange) *FnChange {
+	return &fn
+}
 
 type DataField struct {
 	JsValue         *js.Value
@@ -14,7 +18,7 @@ type DataField struct {
 	someObject      *js.Value
 	proxiedObject   *js.Value
 	elementBindings *js.Value
-	OnChange        FnChange
+	OnChange        *FnChange
 }
 
 func (_this DataField) Value() *js.Value {
@@ -27,7 +31,7 @@ func (_this DataField) Value() *js.Value {
 
 }
 
-func (_this *DataField) SetA(value interface{}) {
+func (_this *DataField) SetString(value string) {
 
 	obj := js.Global().Get("Object").New()
 	obj.Set("value", value)
@@ -38,7 +42,7 @@ func (_this *DataField) SetA(value interface{}) {
 
 }
 
-func (_this *DataField) SetB(value *interface{}) {
+func (_this *DataField) SetInt(value int) {
 
 	obj := js.Global().Get("Object").New()
 	obj.Set("value", value)
@@ -49,8 +53,26 @@ func (_this *DataField) SetB(value *interface{}) {
 
 }
 
-func (_this *DataField) SetC(value js.Value) {
-	_this.Set(&value)
+func (_this *DataField) SetInt64(value int64) {
+
+	obj := js.Global().Get("Object").New()
+	obj.Set("value", value)
+
+	aux := obj.Get("value")
+
+	_this.Set(&aux)
+
+}
+
+func (_this *DataField) SetInterface(value interface{}) {
+
+	obj := js.Global().Get("Object").New()
+	obj.Set("value", value)
+
+	aux := obj.Get("value")
+
+	_this.Set(&aux)
+
 }
 
 func (_this *DataField) Set(value *js.Value) {
@@ -107,7 +129,7 @@ func (_this *DataField) Bind(El js.Value, Property string, Event ...string) {
 
 		El.Call("addEventListener", ev, js.FuncOf(func(t js.Value, args2 []js.Value) interface{} {
 
-			_this.SetA(El.Get(Property))
+			_this.SetInterface(El.Get(Property))
 
 			return nil
 
@@ -118,6 +140,13 @@ func (_this *DataField) Bind(El js.Value, Property string, Event ...string) {
 }
 
 func (_this *DataField) newProxy() {
+
+	if _this.elementBindings == nil {
+
+		arr := js.Global().Get("Array").New()
+		_this.elementBindings = &arr
+
+	}
 
 	if _this.proxiedObject != nil {
 		return
