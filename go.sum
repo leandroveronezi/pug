@@ -1,8 +1,0 @@
-github.com/gorilla/handlers v1.4.2 h1:0QniY0USkHQ1RGCLfKxeNHK9bkDHGRYGNDFBCS+YARg=
-github.com/gorilla/handlers v1.4.2/go.mod h1:Qkdc/uu4tH4g6mTK6auzZ766c4CA0Ng8+o/OAirnOIQ=
-github.com/gowebapi/webapi v0.0.0-20200208062206-f312d109bbdc h1:kWy6J3PScAKh9oT/a2uMUXc1eOjT4xhujPyMU7LJOe4=
-github.com/gowebapi/webapi v0.0.0-20200208062206-f312d109bbdc/go.mod h1:AhOjzuXDfiEYSC7AjptSpMEV3EdvgIwoQyxmOLFjVV4=
-github.com/leandroveronezi/casandra v0.0.0-20191203152825-020a8a43d29e h1:2kfjZJ/27p9bbR3MThyDyNMeDGdCLISBunmPX4D32I0=
-github.com/leandroveronezi/casandra v0.0.0-20191203152825-020a8a43d29e/go.mod h1:1yds69xs10uT1gyzbZi75XbHWXYJhl54ax9UnqtFY4M=
-github.com/leandroveronezi/go-terminal v0.0.0-20190103125746-6d3a1c9af54a h1:LmWrc3zRdWZA/0O+r2JpMwaBCGL452cMOa3EHvAN41A=
-github.com/leandroveronezi/go-terminal v0.0.0-20190103125746-6d3a1c9af54a/go.mod h1:ePZmDfpwx5n2HMMufo1IpZppioBbmkpO2T7O9d6hGyY=
