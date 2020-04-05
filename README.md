@@ -1,4 +1,4 @@
-## webassembly toolkit for go
+## WebAssembly toolkit for go
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/leandroveronezi/pug)](https://goreportcard.com/report/github.com/leandroveronezi/pug)
 [![GoDoc](https://godoc.org/github.com/leandroveronezi/go-recognizer?status.png)](https://godoc.org/github.com/leandroveronezi/pug)
