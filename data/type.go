@@ -6,7 +6,7 @@ import (
 	"syscall/js"
 )
 
-type FnChange func(value *js.Value)
+type FnChange func(value js.Value) js.Value
 
 func FuncChange(fn FnChange) *FnChange {
 	return &fn
@@ -31,51 +31,18 @@ func (_this DataField) Value() *js.Value {
 
 }
 
-func (_this *DataField) SetString(value string) {
+func (_this *DataField) Set(value interface{}) {
 
 	obj := js.Global().Get("Object").New()
 	obj.Set("value", value)
 
 	aux := obj.Get("value")
 
-	_this.Set(&aux)
+	_this.SetJS(&aux)
 
 }
 
-func (_this *DataField) SetInt(value int) {
-
-	obj := js.Global().Get("Object").New()
-	obj.Set("value", value)
-
-	aux := obj.Get("value")
-
-	_this.Set(&aux)
-
-}
-
-func (_this *DataField) SetInt64(value int64) {
-
-	obj := js.Global().Get("Object").New()
-	obj.Set("value", value)
-
-	aux := obj.Get("value")
-
-	_this.Set(&aux)
-
-}
-
-func (_this *DataField) SetInterface(value interface{}) {
-
-	obj := js.Global().Get("Object").New()
-	obj.Set("value", value)
-
-	aux := obj.Get("value")
-
-	_this.Set(&aux)
-
-}
-
-func (_this *DataField) Set(value *js.Value) {
+func (_this *DataField) SetJS(value *js.Value) {
 
 	if _this.someObject == nil {
 		obj := js.Global().Get("Object").New()
@@ -117,6 +84,8 @@ func (_this *DataField) Bind(El js.Value, Property string, Event ...string) {
 
 	}
 
+	set(&El, Property, _this.Value())
+
 	binding := js.Global().Get("Object").New()
 	set(&binding, "element", El)
 	set(&binding, "attribute", Property)
@@ -129,7 +98,7 @@ func (_this *DataField) Bind(El js.Value, Property string, Event ...string) {
 
 		El.Call("addEventListener", ev, js.FuncOf(func(t js.Value, args2 []js.Value) interface{} {
 
-			_this.SetInterface(El.Get(Property))
+			_this.Set(El.Get(Property))
 
 			return nil
 
@@ -172,7 +141,7 @@ func (_this *DataField) newProxy() {
 
 		if _this.OnChange != nil {
 			auxFN := *_this.OnChange
-			auxFN(&val)
+			val = auxFN(val)
 		}
 
 		return js.Global().Get("Reflect").Call("set", target, key, val, receiver)

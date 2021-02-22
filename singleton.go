@@ -1,23 +1,26 @@
 package pug
 
 import (
-	"github.com/gowebapi/webapi"
-	"github.com/gowebapi/webapi/dom"
-	"github.com/leandroveronezi/pug/console"
 	"sync"
 	"syscall/js"
+
+	"github.com/leandroveronezi/pug/console"
 )
 
 type application struct {
 	TagId   string
-	TagMain *dom.Element
+	TagMain js.Value
 }
 
 var instance *application
 var onceApplicationSingleton sync.Once
 
 func init() {
-	js.Global().Set("Pug", js.Global().Call("eval", "new Object()"))
+
+	if js.Global().Get("Pug").IsUndefined() {
+		js.Global().Set("Pug", js.Global().Call("eval", "new Object()"))
+	}
+
 }
 
 func GetApplication() *application {
@@ -26,7 +29,7 @@ func GetApplication() *application {
 
 		instance = &application{}
 		instance.TagId = "application_main"
-		instance.TagMain = webapi.GetWindow().Document().GetElementById(instance.TagId)
+		instance.TagMain = js.Global().Get("document").Call("getElementById", instance.TagId)
 
 	})
 
@@ -35,29 +38,29 @@ func GetApplication() *application {
 
 func (_this *application) Start() {
 
-	_this.TagMain = webapi.GetWindow().Document().GetElementById(_this.TagId)
+	_this.TagMain = js.Global().Get("document").Call("getElementById", instance.TagId)
 
-	if _this.TagMain == nil {
+	/*
+		if _this.TagMain == nil {
 
-		div := webapi.GetDocument().CreateElement("DIV", nil)
-		div.SetAttribute("id", _this.TagId)
-		div.SetInnerHTML("")
-		_this.TagMain = div
+			div := webapi.GetDocument().CreateElement("DIV", nil)
+			div.SetAttribute("id", _this.TagId)
+			div.SetInnerHTML("")
+			_this.TagMain = div
 
-		js.Global().Get("document").Get("body").Call("appendChild", div.JSValue())
+			js.Global().Get("document").Get("body").Call("appendChild", div.JSValue())
 
-	} else if _this.TagMain.JSValue().Type() == js.TypeNull || _this.TagMain.JSValue().Type() == js.TypeUndefined {
+		} else if _this.TagMain.JSValue().Type() == js.TypeNull || _this.TagMain.JSValue().Type() == js.TypeUndefined {
 
-		div := webapi.GetDocument().CreateElement("DIV", nil)
-		div.SetAttribute("id", _this.TagId)
-		div.SetInnerHTML("")
-		_this.TagMain = div
+			div := webapi.GetDocument().CreateElement("DIV", nil)
+			div.SetAttribute("id", _this.TagId)
+			div.SetInnerHTML("")
+			_this.TagMain = div
 
-		js.Global().Get("document").Get("body").Call("appendChild", div.JSValue())
+			js.Global().Get("document").Get("body").Call("appendChild", div.JSValue())
 
-	} else {
-		_this.TagMain.SetInnerHTML("")
-	}
+		}
+	*/
 
 	console.Log("%cPug started!", "color: blue; font-size: 20px")
 
@@ -68,7 +71,7 @@ func (_this *application) Run() {
 	defer func() {
 		if err := recover(); err != nil {
 			console.Group("recover")
-			console.Warn("Recuperado...")
+			console.Warn("recovered...")
 			console.Error(err)
 			console.GroupEnd()
 		}

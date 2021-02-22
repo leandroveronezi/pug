@@ -1,23 +1,25 @@
 package router
 
 import (
-	"github.com/gowebapi/webapi"
-	"github.com/gowebapi/webapi/dom"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync"
 	"syscall/js"
+
+	"github.com/gowebapi/webapi"
+	"github.com/leandroveronezi/pug/console"
 )
 
 type TRoute struct {
 	Path      string
-	Component THTMLComponent
+	Component reflect.Type
 	Meta      interface{}
 }
 
 type TRouter struct {
 	Routes       map[string]TRoute
-	TagMain      *dom.Element
+	TagMain      *js.Value
 	CurrentRoute struct {
 		Name       string
 		Parameters map[string]js.Value
@@ -30,7 +32,13 @@ var onceRouterSingleton sync.Once
 
 func init() {
 
-	js.Global().Get("Pug").Set("Router", js.Global().Call("eval", "new Object()"))
+	if js.Global().Get("Pug").IsUndefined() {
+		js.Global().Set("Pug", js.Global().Call("eval", "new Object()"))
+	}
+
+	if js.Global().Get("Pug").Get("Router").IsUndefined() {
+		js.Global().Get("Pug").Set("Router", js.Global().Call("eval", "new Object()"))
+	}
 
 	js.Global().Get("Pug").Get("Router").Set("Push", js.FuncOf(func(this js.Value, args []js.Value) interface{} {
 
@@ -206,6 +214,7 @@ func (_this *TRouter) Add(Routes map[string]TRoute) {
 func (_this *TRouter) Push(Name string, Parameters map[string]js.Value) {
 
 	if _this.TagMain == nil {
+		console.Error("TagMain is not defined")
 		return
 	}
 
@@ -214,6 +223,7 @@ func (_this *TRouter) Push(Name string, Parameters map[string]js.Value) {
 	routeName := Name
 
 	if !ok {
+		console.Error("route not found")
 
 		if _this.NotFoundRouteName == "" {
 			return
@@ -231,16 +241,40 @@ func (_this *TRouter) Push(Name string, Parameters map[string]js.Value) {
 	_this.CurrentRoute.Name = routeName
 	_this.CurrentRoute.Parameters = Parameters
 
-	var componentType THTMLComponent
+	componentType := _this.Routes[routeName].Component
 
-	componentType = _this.Routes[routeName].Component
-
-	_this.TagMain.SetInnerHTML("")
-
-	componentType.Render(_this.TagMain, Parameters)
+	_this.Render(componentType)
 
 	history := js.Global().Get("Object").New()
 	js.Global().Get("history").Call("pushState", history, js.Null(), "#"+url)
+
+}
+
+func (_this *TRouter) Render(Component reflect.Type) {
+
+	ptr := reflect.New(Component)
+
+	if hasMethod(ptr, "Created") {
+		callMethod(ptr, "Created", []reflect.Value{})
+	}
+
+	h, err := compile(ptr)
+
+	if err != nil {
+		console.Error(err.Error())
+		return
+	}
+
+	el := stringToHtml(h)
+
+	elBind(el, ptr)
+
+	_this.TagMain.Set("innerHTML", "")
+	_this.TagMain.Call("appendChild", el.JSValue())
+
+	if hasMethod(ptr, "Mounted") {
+		callMethod(ptr, "Mounted", []reflect.Value{})
+	}
 
 }
 
