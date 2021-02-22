@@ -80,8 +80,9 @@ func init() {
 		return nil
 	}))
 
-	script := webapi.GetDocument().CreateElement("script", nil)
-	script.SetInnerHTML(`
+	script := js.Global().Get("document").Call("createElement", "script")
+
+	script.Set("innerHTML", `
 
 function getRouteParams(url,routes) {
 
@@ -122,7 +123,7 @@ function getRouteParams(url,routes) {
 
 `)
 
-	js.Global().Get("document").Get("body").Call("appendChild", script.JSValue())
+	js.Global().Get("document").Get("body").Call("appendChild", script)
 
 }
 

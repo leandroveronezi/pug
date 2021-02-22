@@ -1,7 +1,6 @@
 package data
 
 import (
-	"github.com/gowebapi/webapi"
 	"reflect"
 	"syscall/js"
 )
@@ -65,9 +64,9 @@ func (_this *DataField) SetJS(value *js.Value) {
 
 func (_this *DataField) BindA(Id string, Property string, Event ...string) {
 
-	el := webapi.GetWindow().Document().GetElementById(Id)
+	el := js.Global().Get("document").Call("getElementById", Id)
 
-	if el == nil {
+	if el.IsUndefined() {
 		return
 	}
 
