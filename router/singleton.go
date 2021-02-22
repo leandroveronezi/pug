@@ -1,14 +1,12 @@
 package router
 
 import (
+	"github.com/leandroveronezi/pug/console"
 	"reflect"
 	"strconv"
 	"strings"
 	"sync"
 	"syscall/js"
-
-	"github.com/gowebapi/webapi"
-	"github.com/leandroveronezi/pug/console"
 )
 
 type TRoute struct {
