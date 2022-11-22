@@ -163,7 +163,7 @@ func (_this *DataField) newProxy() {
 
 	}))
 
-	proxy := js.Global().Get("Proxy").New(_this.someObject, obj)
+	proxy := js.Global().Get("Proxy").New(*_this.someObject, obj)
 
 	_this.proxiedObject = &proxy
 
