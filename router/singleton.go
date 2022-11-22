@@ -1,12 +1,13 @@
 package router
 
 import (
-	"github.com/leandroveronezi/pug/console"
 	"reflect"
 	"strconv"
 	"strings"
 	"sync"
 	"syscall/js"
+
+	"github.com/leandroveronezi/pug/console"
 )
 
 type TRoute struct {
@@ -93,12 +94,12 @@ function getRouteParams(url,routes) {
 		var currRoute = routes[x].url;
 		var routeMatcher = new RegExp(currRoute.replace(/(:\w+)/g, '([\\w-]+)'));
 		argsVal = url.match(routeMatcher);
-	
+
 		if(argsVal) {
-	
+
 			argsVal.shift();
 		  	argsNames = currRoute.match(/(:\w+)/g);
-	
+
 		  	if(argsNames) {
 				for(var y = 0; y < argsNames.length; y++){
 			  		params[argsNames[y].slice(1)] = argsVal[y];
@@ -106,15 +107,15 @@ function getRouteParams(url,routes) {
 		  	}
 
 			params.url = currRoute;
-	
+
 		  	return {
 				params : params
 		  	};
-	
+
 		}
 
 	}
-	
+
 	return null;
 
 }
@@ -269,7 +270,7 @@ func (_this *TRouter) Render(Component reflect.Type) {
 	elBind(el, ptr)
 
 	_this.TagMain.Set("innerHTML", "")
-	_this.TagMain.Call("appendChild", el.JSValue())
+	_this.TagMain.Call("appendChild", el)
 
 	if hasMethod(ptr, "Mounted") {
 		callMethod(ptr, "Mounted", []reflect.Value{})
