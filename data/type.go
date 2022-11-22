@@ -70,7 +70,7 @@ func (_this *DataField) BindA(Id string, Property string, Event ...string) {
 		return
 	}
 
-	_this.Bind(el.JSValue(), Property, Event...)
+	_this.Bind(el, Property, Event...)
 
 }
 
